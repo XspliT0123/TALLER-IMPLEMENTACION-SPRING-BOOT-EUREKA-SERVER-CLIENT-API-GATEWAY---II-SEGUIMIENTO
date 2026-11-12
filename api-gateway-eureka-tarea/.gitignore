@@ -1,0 +1,12 @@
+# Variables privadas
+.env
+
+# IntelliJ
+.idea/
+**/.idea/
+
+# Maven
+**/target/
+
+# Archivos temporales
+*.log

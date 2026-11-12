@@ -1,0 +1,129 @@
+
+services:
+  postgres-productos:
+    image: postgres:16-alpine
+    container_name: postgres-productos
+    environment:
+      POSTGRES_DB: ${PRODUCTOS_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5433:5432"
+    volumes:
+      - productos_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${PRODUCTOS_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-pedidos:
+    image: postgres:16-alpine
+    container_name: postgres-pedidos
+    environment:
+      POSTGRES_DB: ${PEDIDOS_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5434:5432"
+    volumes:
+      - pedidos_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${PEDIDOS_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "9099:9099"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9099/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  producto-service:
+    build: ./producto-service
+    container_name: producto-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres-productos:5432/productos
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      EUREKA_SERVER_URL: http://eureka-server:9099/eureka
+    depends_on:
+      postgres-productos:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  pedido-service:
+    build: ./pedido-service
+    container_name: pedido-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres-pedidos:5432/pedidos
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      EUREKA_SERVER_URL: http://eureka-server:9099/eureka
+    depends_on:
+      postgres-pedidos:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    environment:
+      EUREKA_SERVER_URL: http://eureka-server:9099/eureka
+    depends_on:
+      eureka-server:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8086/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "9056:9056"
+    depends_on:
+      eureka-server:
+        condition: service_started
+      producto-service:
+        condition: service_started
+      pedido-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+    environment:
+      EUREKA_SERVER_URL: http://eureka-server:9099/eureka
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9056/actuator/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  productos_data:
+  pedidos_data:

@@ -1,0 +1,32 @@
+
+server:
+  port: 8081
+
+spring:
+  application:
+    name: producto-service
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://postgres-productos:5432/productos}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:9099/eureka}
+
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

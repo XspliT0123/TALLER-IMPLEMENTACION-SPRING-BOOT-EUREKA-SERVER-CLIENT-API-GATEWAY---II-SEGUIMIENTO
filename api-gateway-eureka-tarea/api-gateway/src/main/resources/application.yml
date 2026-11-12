@@ -1,18 +1,35 @@
+
 server:
   port: 9056
 
 spring:
   application:
     name: API-GATEWAY
+
   cloud:
     gateway:
       routes:
+        # Ruta para usuarios
         - id: USER-SERVICE
           uri: lb://USER-SERVICE
           predicates:
             - Path=/client/**
+
+        # Ruta para productos
+        - id: PRODUCTO-SERVICE
+          uri: lb://PRODUCTO-SERVICE
+          predicates:
+            - Path=/productos/**
+
+        # Ruta para pedidos
+        - id: PEDIDO-SERVICE
+          uri: lb://PEDIDO-SERVICE
+          predicates:
+            - Path=/pedidos/**
+
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
       globalcors:
         cors-configurations:
           '[/**]':
@@ -25,6 +42,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://localhost:9099/eureka
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:9099/eureka}
+
   instance:
     prefer-ip-address: true
